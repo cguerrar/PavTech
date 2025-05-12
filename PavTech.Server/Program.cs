@@ -1,28 +1,34 @@
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
-app.UseDefaultFiles();
-app.MapStaticAssets();
-
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (!app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseExceptionHandler("/Error");
+    app.UseHsts();
 }
 
 app.UseHttpsRedirection();
+app.UseDefaultFiles(); // Importante
+app.UseStaticFiles();  // Importante para servir archivos de wwwroot
 
-app.UseAuthorization();
+// Middleware para manejar las rutas de React
+app.MapWhen(ctx => !ctx.Request.Path.StartsWithSegments("/api"), builder =>
+{
+    builder.UseStaticFiles();
+    builder.UseDefaultFiles();
+    builder.Run(async context =>
+    {
+        context.Response.ContentType = "text/html";
+        await context.Response.SendFileAsync(Path.Combine(app.Environment.WebRootPath, "index.html"));
+    });
+});
 
 app.MapControllers();
-
-app.MapFallbackToFile("/index.html");
+app.MapFallbackToFile("index.html"); // Redirige a index.html sin barra diagonal inicial
 
 app.Run();
